@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP SS8050-G
+D 1.5A Ic, 25V Vce, Low Voltage High Current NPN Transistor, SOT-23
+K SS8050-G NPN Low Voltage High Current Transistor
+F https://www.mouser.at/datasheet/2/80/SS8050_G_RevA181526-2506539.pdf
+$ENDCMP
+#
+#End Doc Library
