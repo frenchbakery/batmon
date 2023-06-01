@@ -1,0 +1,3 @@
+[submodule "hardware/esp32version/el_kicad_libs"]
+	path = hardware/esp32version/el_kicad_libs
+	url = https://github.com/melektron/el_kicad_libs.git

@@ -1,4 +1,4 @@
 (sym_lib_table
   (version 7)
-  (lib (name "ELEKTRON_Components")(type "KiCad")(uri "${KIPRJMOD}/MyKiCAD_Libs/ELEKTRON_Components.kicad_sym")(options "")(descr ""))
+  (lib (name "ELEKTRON_Components")(type "KiCad")(uri "${KIPRJMOD}/el_kicad_libs/ELEKTRON_Components.kicad_sym")(options "")(descr ""))
 )
