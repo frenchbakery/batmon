@@ -1439,11 +1439,11 @@
   (junction (at 153.67 168.91) (diameter 0) (color 0 0 0 0)
     (uuid b0d87cdd-64e6-4058-bc08-f8b9fa7bec1d)
   )
-  (junction (at 86.36 39.37) (diameter 0) (color 0 0 0 0)
-    (uuid bc85b326-7b39-4f90-90e7-5ee567b2e0fd)
-  )
   (junction (at 33.02 152.4) (diameter 0) (color 0 0 0 0)
     (uuid ca768b29-7328-45d3-b0af-4dff2cc4bebf)
+  )
+  (junction (at 86.36 39.37) (diameter 0) (color 0 0 0 0)
+    (uuid cb86da7e-c72c-4e6f-a9be-cd967dabadbe)
   )
   (junction (at 109.22 39.37) (diameter 0) (color 0 0 0 0)
     (uuid ce66a91d-b9df-41bc-9608-954170f7713e)
@@ -1509,7 +1509,7 @@
     (uuid 0ba76ce4-09be-4266-953e-66ee61862cfb)
   )
 
-  (wire (pts (xy 110.49 74.93) (xy 88.9 74.93))
+  (wire (pts (xy 109.22 74.93) (xy 88.9 74.93))
     (stroke (width 0) (type default))
     (uuid 0bc518df-1bb2-4604-8758-bc6de055a046)
   )
@@ -1836,6 +1836,10 @@
     (stroke (width 0) (type default))
     (uuid ad6b6216-b55f-4076-86c7-58a61bc31d17)
   )
+  (wire (pts (xy 109.22 53.34) (xy 110.49 53.34))
+    (stroke (width 0) (type default))
+    (uuid ae16c2d6-25ad-4179-9b8b-3d6cfa551360)
+  )
   (wire (pts (xy 86.36 39.37) (xy 86.36 45.72))
     (stroke (width 0) (type default))
     (uuid af949eb9-c5a3-4431-a037-d526b9a34e7c)
@@ -2023,7 +2027,7 @@
     (uuid f4e6b2d0-667f-4281-b756-c6662d0b85c5)
   )
 
-  (wire (pts (xy 110.49 53.34) (xy 110.49 74.93))
+  (wire (pts (xy 109.22 53.34) (xy 109.22 74.93))
     (stroke (width 0) (type default))
     (uuid f8e1e1f2-c1a8-42ee-8ff0-1c7d2f2653cf)
   )
@@ -2600,8 +2604,8 @@
     (property "Datasheet" "~" (at 114.3 39.37 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid a2a601b2-ae32-4bf3-9ded-ec72745268f9))
-    (pin "2" (uuid aaa596d7-7379-42b3-a892-b7cc1c23456e))
+    (pin "1" (uuid 28ff2aa1-2fcd-48ce-b687-b92b58ed4898))
+    (pin "2" (uuid ac51efdc-41a5-4d8e-b96f-dfd93ce0ef0e))
     (instances
       (project "BatMon"
         (path "/8cdf4f9d-1967-4f03-a23a-bb9e47281b6b"
@@ -3062,8 +3066,8 @@
     (property "Datasheet" "~" (at 104.14 39.37 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid f2e4b815-5cb7-4ca2-a1d0-0629207159c3))
-    (pin "2" (uuid 00906005-9e47-4acc-9ac0-e829bd7bc2fc))
+    (pin "1" (uuid 09bb8ee6-2e6b-4465-bb90-539ad83b9ac7))
+    (pin "2" (uuid 540d38e1-9afc-4b47-9e94-ade1e2fe320a))
     (instances
       (project "BatMon"
         (path "/8cdf4f9d-1967-4f03-a23a-bb9e47281b6b"
