@@ -24,13 +24,14 @@ void loop()
     UC1 = analogRead(C1I);
     UC2 = analogRead(C2I);
 
-    sprintf(buff, "ADC values: %d\t%d", UC1, UC2);
+    printf("ADC values: %d\t%d", UC1, UC2);
 
     // "blink" LED and Buzzer
-    digitalWrite(BUZZER, 1);
-    tone(LEDC_HS_SIG_OUT1_IDX, 440);
+    digitalWrite(LED, 1);
+    tone(BUZZER, 440);
 
     delay(500);
-    digitalWrite(LED, 0);
+    digitalWrite(LED, 0); 
     noTone(BUZZER);
+    delay(500);
 }
