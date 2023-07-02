@@ -4,6 +4,8 @@
 
 #define BUZZER 14
 #define LED 26
+#define WRONG_C1I 16
+#define WRONG_C2I 17
 #define C1I 35
 #define C2I 34
 
@@ -14,6 +16,8 @@ void setup()
     pinMode(BUZZER, OUTPUT);
     digitalWrite(BUZZER, 0);
     pinMode(LED, OUTPUT);
+    pinMode(WRONG_C1I, INPUT);
+    pinMode(WRONG_C2I, INPUT);
     pinMode(C1I, INPUT);
     pinMode(C2I, INPUT);
 }
@@ -31,10 +35,10 @@ void loop()
 
     // "blink" LED and Buzzer
     digitalWrite(LED, 1);
-    //tone(BUZZER, 440);
+    tone(BUZZER, 440);
 
     delay(500);
-    digitalWrite(LED, 0); 
-    //noTone(BUZZER);
+    digitalWrite(LED, 0);
+    noTone(BUZZER);
     delay(500);
 }
