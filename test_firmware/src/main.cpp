@@ -1,13 +1,19 @@
+/**
+ * @file main.cpp
+ * @author Nilusink
+ * @brief 
+ * @version 0.1
+ * @date 2023-07-03
+ * 
+ * @copyright Copyright FrenchBakery (c) 2023
+ * 
+ */
+
 #include <Arduino.h>
 #include <iostream>
 
-
-#define BUZZER 14
-#define LED 26
-#define WRONG_C1I 16
-#define WRONG_C2I 17
-#define C1I 35
-#define C2I 34
+#include "pins.h"
+#include "player.hpp"
 
 
 void setup()
@@ -20,6 +26,8 @@ void setup()
     pinMode(WRONG_C2I, INPUT);
     pinMode(C1I, INPUT);
     pinMode(C2I, INPUT);
+
+    Player::start();
 }
 
 
@@ -35,10 +43,10 @@ void loop()
 
     // "blink" LED and Buzzer
     digitalWrite(LED, 1);
-    tone(BUZZER, 440);
+    //tone(BUZZER, 440);
 
     delay(500);
     digitalWrite(LED, 0);
-    noTone(BUZZER);
+    //noTone(BUZZER);
     delay(500);
 }
