@@ -6,6 +6,10 @@
 		{
 			"name": "test_firmware",
 			"path": "test_firmware"
+		},
+		{
+			"name": "firmware",
+			"path": "firmware"
 		}
 	],
 	"settings": {
@@ -61,7 +65,9 @@
 			"stdexcept": "cpp",
 			"streambuf": "cpp",
 			"cinttypes": "cpp",
-			"typeinfo": "cpp"
+			"typeinfo": "cpp",
+			"esp_log.h": "c",
+			"sdkconfig.h": "c"
 		}
 	}
 }
