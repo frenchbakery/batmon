@@ -12,11 +12,11 @@
 #include "env.hpp"
 
 // GPIO Outputs
-idf::GPIONum env::BUZZER(14);
-idf::GPIONum env::LED(26);
+const gpio_num_t env::BUZZER = GPIO_NUM_14;
+const gpio_num_t env::LED = GPIO_NUM_26;
 
 // GPIO Inputs
-idf::GPIONum env::WRONG_C1I(16);
-idf::GPIONum env::WRONG_C2I(17);
-idf::GPIONum env::C1I(35);
-idf::GPIONum env::C2I(34);
+const gpio_num_t env::WRONG_C1I = GPIO_NUM_16;
+const gpio_num_t env::WRONG_C2I = GPIO_NUM_17;
+const gpio_num_t env::C1I = GPIO_NUM_35;
+const gpio_num_t env::C2I = GPIO_NUM_34;

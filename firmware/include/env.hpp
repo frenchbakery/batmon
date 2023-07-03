@@ -11,18 +11,18 @@
 
 #pragma once
 
-#include <gpio_cxx.hpp>
+#include <driver/gpio.h>
 
 namespace env
 {
     // GPIO Outputs
-    extern idf::GPIONum BUZZER;
-    extern idf::GPIONum LED;
+    extern const gpio_num_t BUZZER;
+    extern const gpio_num_t LED;
 
     // GPIO Inputs
-    extern idf::GPIONum WRONG_C1I;
-    extern idf::GPIONum WRONG_C2I;
-    extern idf::GPIONum C1I;
-    extern idf::GPIONum C2I;
+    extern const gpio_num_t WRONG_C1I;
+    extern const gpio_num_t WRONG_C2I;
+    extern const gpio_num_t C1I;
+    extern const gpio_num_t C2I;
 
 };
