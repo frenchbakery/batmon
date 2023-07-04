@@ -13,6 +13,7 @@
 
 #include <driver/gpio.h>
 #include <esp_adc/adc_oneshot.h>
+#include <esp_adc/adc_cali.h>
 
 namespace env
 {
@@ -28,6 +29,7 @@ namespace env
 
     // ADC handles (all on unit ADC1, only use after gpio init)
     extern adc_oneshot_unit_handle_t adc1_handle;
+    extern adc_cali_handle_t adc1_calibration_handle;
     extern adc_channel_t c1i_adc_channel;
     extern adc_channel_t c2i_adc_channel;
 
