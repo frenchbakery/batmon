@@ -12,6 +12,7 @@
 #pragma once
 
 #include <driver/gpio.h>
+#include <esp_adc/adc_oneshot.h>
 
 namespace env
 {
@@ -25,9 +26,21 @@ namespace env
     extern const gpio_num_t C1I;
     extern const gpio_num_t C2I;
 
+    // ADC handles (all on unit ADC1, only use after gpio init)
+    extern adc_oneshot_unit_handle_t adc1_handle;
+    extern adc_channel_t c1i_adc_channel;
+    extern adc_channel_t c2i_adc_channel;
+
     /**
      * @brief configures the GPIO pins
      *
      */
     void init_gpio();
+
+    /**
+     * @brief initializes the ADC and the channel
+     * config variables c1i_adc_channel and c2i_adc_channel
+     * 
+     */
+    void init_adc();
 };

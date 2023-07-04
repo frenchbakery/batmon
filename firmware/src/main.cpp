@@ -8,6 +8,9 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_heap_trace.h>
+#include <esp_adc/adc_oneshot.h>
+#include <esp_adc/adc_cali.h>
+#include <esp_adc/adc_cali_scheme.h>
 
 #include "utils.hpp"
 #include "log.hpp"
@@ -28,30 +31,41 @@ extern "C" void app_main()
     LOGI("Initializing GPIO Pins");
     env::init_gpio();
 
-    LOGI("Initializing LED");
+    LOGI("Initializing ADC");
+    env::init_adc();
+
+    LOGI("Initializing LED blink controller");
     led::init();
+    led::set_blink_notice_alive();
 
     LOGI("Initializing buzzer");
     gpio_set_level(env::BUZZER, 0);
 
+
+    
+
+    LOGI("Initialization done");
+
     for (;;)
     {
-        LOGI("task '%s': is alive, start heap tracing", pcTaskGetName(NULL));
-        ESP_ERROR_CHECK(heap_trace_start(HEAP_TRACE_ALL));
+        //LOGI("task '%s': is alive, start heap tracing", pcTaskGetName(NULL));
+        //ESP_ERROR_CHECK(heap_trace_start(HEAP_TRACE_ALL));
+        // some code here
+        //ESP_ERROR_CHECK(heap_trace_stop());
+        //LOGI("Heap trace results:");
+        //heap_trace_dump();
 
-        led::set_permanent_on();
-        sleep(10);
-        led::set_permanent_off();
-        sleep(10);
-        led::set_blink_notice_alive();
-        sleep(10);
-        led::set_blink_charging();
-        sleep(10);
-        led::set_blink_alarm();
-        sleep(10);
+        int adc_raw[2];
 
-        ESP_ERROR_CHECK(heap_trace_stop());
-        LOGI("Heap trace results:");
-        heap_trace_dump();
+        ESP_ERROR_CHECK(adc_oneshot_read(env::adc1_handle, env::c1i_adc_channel, &adc_raw[0]));
+        LOGI("ADC1 Channel[%d] Raw Data: %d", env::c1i_adc_channel, adc_raw[0]);
+
+        ESP_ERROR_CHECK(adc_oneshot_read(env::adc1_handle, env::c2i_adc_channel, &adc_raw[1]));
+        LOGI("ADC1 Channel[%d] Raw Data: %d", env::c2i_adc_channel, adc_raw[1]);
+
+        printf("\n");
+
+        msleep(500);
     }
+
 }
