@@ -130,9 +130,9 @@ void led::task_fn(void *)
 
         case led_state_t::BLINK_NOTICE_ALIVE:
             gpio_set_level(env::LED, 1);
-            msleep(100);
+            msleep(60);
             gpio_set_level(env::LED, 0);
-            msleep(2900);
+            msleep(2940);
             break;
 
         case led_state_t::BLINK_CHARGING:
@@ -144,13 +144,13 @@ void led::task_fn(void *)
 
         case led_state_t::BLINK_ALARM:
             gpio_set_level(env::LED, 1);
-            msleep(300);
+            msleep(150);
             gpio_set_level(env::LED, 0);
-            msleep(300);
+            msleep(150);
             gpio_set_level(env::LED, 1);
-            msleep(300);
+            msleep(150);
             gpio_set_level(env::LED, 0);
-            msleep(1100);
+            msleep(1050);
             break;
 
         default:
@@ -162,6 +162,6 @@ void led::task_fn(void *)
     
     // set to nullptr before deleting, as any code after this line
     // is not run and the variable isn't referenced here anyway
-    task_handle == nullptr;
+    task_handle = nullptr;
     vTaskDelete(NULL);
 }
