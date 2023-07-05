@@ -60,9 +60,9 @@ int battery::read_cell1()
 {
     int adc_raw;
     int adc_voltage;
-    ESP_ERROR_CHECK(adc_oneshot_read(env::adc1_handle, env::c1i_adc_channel, &adc_raw));
+    adc_raw = adc_read_multisample(env::adc1_handle, env::c1i_adc_channel, 64);
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(env::adc1_calibration_handle, adc_raw, &adc_voltage));
-    LOGI("ADC1 C1I raw data: %4d, voltage: %4d mV", adc_raw, adc_voltage);
+    LOGD("ADC1 C1I raw data: %4d, voltage: %4d mV", adc_raw, adc_voltage);
     return adc_voltage * 3;
 }
 
@@ -70,8 +70,8 @@ int battery::read_cell2()
 {
     int adc_raw;
     int adc_voltage;
-    ESP_ERROR_CHECK(adc_oneshot_read(env::adc1_handle, env::c2i_adc_channel, &adc_raw));
+    adc_raw = adc_read_multisample(env::adc1_handle, env::c2i_adc_channel, 64);
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(env::adc1_calibration_handle, adc_raw, &adc_voltage));
-    LOGI("ADC1 C2I raw data: %4d, voltage: %4d mV", adc_raw, adc_voltage);
+    LOGD("ADC1 C2I raw data: %4d, voltage: %4d mV", adc_raw, adc_voltage);
     return adc_voltage * 3;
 }
