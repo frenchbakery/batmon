@@ -24,24 +24,24 @@ namespace led // private
     // led task symbols
     // The statically allocated memory for the task's stack
 #define TASK_STACK_SIZE 3000
-    StackType_t task_stack[TASK_STACK_SIZE];
+    static StackType_t task_stack[TASK_STACK_SIZE];
     // Handle buffer and handle to led task
-    StaticTask_t task_static_buffer;
-    TaskHandle_t task_handle = nullptr;
+    static StaticTask_t task_static_buffer;
+    static TaskHandle_t task_handle = nullptr;
     // Entry point of LED task
-    void task_fn(void *);
+    static void task_fn(void *);
     
     /**
      * @brief starts the LED task if it is not running already.
      * If it is already running it stops the task and restarts it.
      */
-    void start_task();
+    static void start_task();
 
     /**
      * @brief stops the led task if it is running
      * 
      */
-    void stop_task();
+    static void stop_task();
 
     // led state
     enum class led_state_t
@@ -51,7 +51,7 @@ namespace led // private
         BLINK_CHARGING,     // 1 Hz 50% flashing indicating battery is being charged
         BLINK_ALARM,        // two quick medium duration pulses every second to indicate an error
     };
-    led_state_t led_state = led_state_t::PERMANENT;
+    static led_state_t led_state = led_state_t::PERMANENT;
 };
 
 void led::init()
@@ -94,7 +94,7 @@ void led::set_blink_alarm()
     start_task();
 }
 
-void led::start_task()
+static void led::start_task()
 {
     if (task_handle != nullptr)
         stop_task();
@@ -109,7 +109,7 @@ void led::start_task()
         &task_static_buffer
     );
 }
-void led::stop_task()
+static void led::stop_task()
 {
     if (task_handle == nullptr)
         return;
@@ -118,7 +118,7 @@ void led::stop_task()
     task_handle = nullptr;
 }
 
-void led::task_fn(void *)
+static void led::task_fn(void *)
 {
     for (;;)
     {

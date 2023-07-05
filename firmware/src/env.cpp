@@ -82,6 +82,7 @@ void env::init_adc()
         .unit_id = ADC_UNIT_1,
         .atten = USED_ADC1_ATTENUATION,
         .bitwidth = USED_ADC1_BITWIDTH,
+        .default_vref = 1100
     };
     ESP_ERROR_CHECK(adc_cali_create_scheme_line_fitting(&cali_config, &adc1_calibration_handle));
 
