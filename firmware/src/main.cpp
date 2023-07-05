@@ -13,6 +13,7 @@
 #include <esp_adc/adc_cali_scheme.h>
 
 #include "battery.hpp"
+#include "buzzer.hpp"
 #include "utils.hpp"
 #include "log.hpp"
 #include "env.hpp"
@@ -40,7 +41,7 @@ extern "C" void app_main()
     led::set_blink_notice_alive();
 
     LOGI("Initializing buzzer");
-    gpio_set_level(env::BUZZER, 0);
+    buzzer::init();
 
     LOGI("Initialization done");
 
@@ -52,7 +53,16 @@ extern "C" void app_main()
         int c2_voltage = battery::read_cell2();
         LOGI("C1 (L): %1.2f V,\tC2 (H): %1.2f", c1_voltage * 0.001, c2_voltage * 0.001);
         
-        msleep(500);
+        buzzer::play_quiet();
+        msleep(5000);
+        buzzer::play_battery_low();
+        msleep(5000);
+        buzzer::play_battery_alarm();
+        msleep(5000);
     }
+    
 
+
+    LOGE("exited main loop, shouldn't happen, restart");
+    esp_restart();
 }

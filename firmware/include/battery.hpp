@@ -1,5 +1,5 @@
 /**
- * @file battery.cpp
+ * @file battery.hpp
  * @author melektron
  * @brief battery cell functions
  * @version 0.1

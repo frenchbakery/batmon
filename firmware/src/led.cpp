@@ -43,15 +43,15 @@ namespace led // private
      */
     static void stop_task();
 
-    // led state
-    enum class led_state_t
+    // led modes
+    enum class led_mode_t
     {
-        PERMANENT,          // permanent on/off state, no actions need to happen in background
+        PERMANENT,          // permanent on/off mode, no actions need to happen in background
         BLINK_NOTICE_ALIVE, // short pulse every few seconds to indicate the device is turned on
         BLINK_CHARGING,     // 1 Hz 50% flashing indicating battery is being charged
         BLINK_ALARM,        // two quick medium duration pulses every second to indicate an error
     };
-    static led_state_t led_state = led_state_t::PERMANENT;
+    static led_mode_t led_mode = led_mode_t::PERMANENT;
 };
 
 void led::init()
@@ -66,31 +66,31 @@ void led::init()
 void led::set_permanent_off()
 {
     stop_task();
-    led_state = led_state_t::PERMANENT;
+    led_mode = led_mode_t::PERMANENT;
     gpio_set_level(env::LED, 0);
 }
 void led::set_permanent_on()
 {
     stop_task();
-    led_state = led_state_t::PERMANENT;
+    led_mode = led_mode_t::PERMANENT;
     gpio_set_level(env::LED, 1);
 }
 void led::set_blink_notice_alive()
 {
     gpio_set_level(env::LED, 0);
-    led_state = led_state_t::BLINK_NOTICE_ALIVE;
+    led_mode = led_mode_t::BLINK_NOTICE_ALIVE;
     start_task();
 }
 void led::set_blink_charging()
 {
     gpio_set_level(env::LED, 0);
-    led_state = led_state_t::BLINK_CHARGING;
+    led_mode = led_mode_t::BLINK_CHARGING;
     start_task();
 }
 void led::set_blink_alarm()
 {
     gpio_set_level(env::LED, 0);
-    led_state = led_state_t::BLINK_ALARM;
+    led_mode = led_mode_t::BLINK_ALARM;
     start_task();
 }
 
@@ -114,35 +114,36 @@ static void led::stop_task()
     if (task_handle == nullptr)
         return;
     
-    vTaskDelete(task_handle);
+    auto task_handle_tmp = task_handle;
     task_handle = nullptr;
+    vTaskDelete(task_handle_tmp);
 }
 
 static void led::task_fn(void *)
 {
     for (;;)
     {
-        switch (led_state)
+        switch (led_mode)
         {
-        case led_state_t::PERMANENT:
+        case led_mode_t::PERMANENT:
             sleep(1);
             break;
 
-        case led_state_t::BLINK_NOTICE_ALIVE:
+        case led_mode_t::BLINK_NOTICE_ALIVE:
             gpio_set_level(env::LED, 1);
             msleep(60);
             gpio_set_level(env::LED, 0);
             msleep(2940);
             break;
 
-        case led_state_t::BLINK_CHARGING:
+        case led_mode_t::BLINK_CHARGING:
             gpio_set_level(env::LED, 1);
             msleep(500);
             gpio_set_level(env::LED, 0);
             msleep(500);
             break;
 
-        case led_state_t::BLINK_ALARM:
+        case led_mode_t::BLINK_ALARM:
             gpio_set_level(env::LED, 1);
             msleep(150);
             gpio_set_level(env::LED, 0);
