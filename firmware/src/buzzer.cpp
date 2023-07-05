@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include "buzzer.hpp"
+#include "pitches.h"
 #include "utils.hpp"
 #include "env.hpp"
 #include "log.hpp"
@@ -57,6 +58,7 @@ namespace buzzer    // private
     enum class buzzer_mode_t
     {
         QUIET,              // quiet, nothing plays
+        STARTUP,            // charming three notes played at startup
         BATTERY_LOW,        // short medium pitch pulse every few seconds to indicate the battery is starting to get low
         BATTERY_ALARM,      // short, rapid high pitch pulses indicating the battery is critically low or there is a large
                             // cell voltage difference
@@ -108,6 +110,13 @@ void buzzer::play_quiet()
     turn_off();
     buzzer_mode = buzzer_mode_t::QUIET;
     // don't need the task to run for this
+}
+void buzzer::play_startup()
+{
+    stop_task();
+    turn_off();
+    buzzer_mode = buzzer_mode_t::STARTUP;
+    start_task();
 }
 void buzzer::play_battery_low()
 {
@@ -203,8 +212,20 @@ static void buzzer::task_fn(void *)
             msleep(1900);
             break;
 
+        case buzzer_mode_t::STARTUP:
+            set_frequency(HZ_NOTE_E2);
+            turn_on();
+            msleep(120);
+            set_frequency(HZ_NOTE_B3);
+            msleep(120);
+            set_frequency(HZ_NOTE_E4);
+            msleep(120);
+            turn_off();
+            goto cleanup;
+            break;
+
         case buzzer_mode_t::BATTERY_ALARM:
-            set_frequency(440);
+            set_frequency(HZ_NOTE_F5);
             turn_on();
             msleep(200);
             turn_off();

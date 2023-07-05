@@ -38,21 +38,21 @@ extern "C" void app_main()
 
     LOGI("Initializing LED blink controller");
     led::init();
-    led::set_blink_notice_alive();
 
     LOGI("Initializing buzzer");
     buzzer::init();
 
     LOGI("Initialization done");
-
-
+    led::set_blink_notice_alive();
+    buzzer::play_startup();
+    msleep(1000);
 
     for (;;)
     {
         int c1_voltage = battery::read_cell1();
         int c2_voltage = battery::read_cell2();
         LOGI("C1 (L): %1.2f V,\tC2 (H): %1.2f", c1_voltage * 0.001, c2_voltage * 0.001);
-        
+
         buzzer::play_quiet();
         msleep(5000);
         buzzer::play_battery_low();

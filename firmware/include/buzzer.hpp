@@ -21,6 +21,7 @@ namespace buzzer
 
     // functions to play different sounds
     void play_quiet();
+    void play_startup();
     void play_battery_low();
     void play_battery_alarm();
 
