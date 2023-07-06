@@ -13,4 +13,5 @@ These are helpful notes for working with the project
  - ESP-IDF GPIO doc: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/gpio.html+
  - Wrong ESP-IDF Version installed: https://community.platformio.org/t/is-it-possible-to-use-the-latest-esp32-idf-with-platformio/32125
  - different C++ version for ESP-IDF: https://community.platformio.org/t/separate-settings-for-c-and-c-versions/21647
+ - FreeRTOS Task Notifications: https://www.freertos.org/RTOS-task-notifications.html
  
