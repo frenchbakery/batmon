@@ -48,18 +48,24 @@ namespace led // private
     {
         PERMANENT,          // permanent on/off mode, no actions need to happen in background
         BLINK_NOTICE_ALIVE, // short pulse every few seconds to indicate the device is turned on
-        BLINK_CHARGING,     // 1 Hz 50% flashing indicating battery is being charged
-        BLINK_ALARM,        // two quick medium duration pulses every second to indicate an error
+        BLINK_CHARGING,     // 1 Hz 50% duty flashing indicating battery is being charged
+        BLINK_WARNING,      // two quick medium duration pulses every second to indicate the battery is low
+        BLINK_ALARM,        // fast, rapid pulses indicating a critical battery alarm
     };
     static led_mode_t led_mode = led_mode_t::PERMANENT;
+
+    /**
+     * @brief sets the LED to a specific mode. 
+     * Use this if there is no special initialization needed.
+     * 
+     * @param _mode mode to activate
+     */
+    static void set_mode(led_mode_t _mode);
 };
 
 void led::init()
 {
-    // turn LED off
-    gpio_set_level(env::LED, 0);
-
-    // set to default state
+    // set to off state
     set_permanent_off();
 }
 
@@ -77,20 +83,29 @@ void led::set_permanent_on()
 }
 void led::set_blink_notice_alive()
 {
-    gpio_set_level(env::LED, 0);
-    led_mode = led_mode_t::BLINK_NOTICE_ALIVE;
-    start_task();
+    set_mode(led_mode_t::BLINK_NOTICE_ALIVE);
 }
 void led::set_blink_charging()
 {
-    gpio_set_level(env::LED, 0);
-    led_mode = led_mode_t::BLINK_CHARGING;
-    start_task();
+    set_mode(led_mode_t::BLINK_CHARGING);
+}
+void led::set_blink_warning()
+{
+    set_mode(led_mode_t::BLINK_WARNING);
 }
 void led::set_blink_alarm()
 {
+    set_mode(led_mode_t::BLINK_ALARM);
+}
+
+static void led::set_mode(led_mode_t _mode)
+{
+    // if the mode is already active, do nothing
+    if (led_mode == _mode) return;
+
+    stop_task();
     gpio_set_level(env::LED, 0);
-    led_mode = led_mode_t::BLINK_ALARM;
+    led_mode = _mode;
     start_task();
 }
 
@@ -126,7 +141,7 @@ static void led::task_fn(void *)
         switch (led_mode)
         {
         case led_mode_t::PERMANENT:
-            sleep(1);
+            goto cleanup;
             break;
 
         case led_mode_t::BLINK_NOTICE_ALIVE:
@@ -143,15 +158,22 @@ static void led::task_fn(void *)
             msleep(500);
             break;
 
+        case led_mode_t::BLINK_WARNING:
+            gpio_set_level(env::LED, 1);
+            msleep(150);
+            gpio_set_level(env::LED, 0);
+            msleep(150);
+            gpio_set_level(env::LED, 1);
+            msleep(150);
+            gpio_set_level(env::LED, 0);
+            msleep(1550);
+            break;
+
         case led_mode_t::BLINK_ALARM:
             gpio_set_level(env::LED, 1);
             msleep(150);
             gpio_set_level(env::LED, 0);
             msleep(150);
-            gpio_set_level(env::LED, 1);
-            msleep(150);
-            gpio_set_level(env::LED, 0);
-            msleep(1050);
             break;
 
         default:
@@ -160,7 +182,8 @@ static void led::task_fn(void *)
             break;
         }
     }
-    
+
+cleanup:
     // set to nullptr before deleting, as any code after this line
     // is not run and the variable isn't referenced here anyway
     task_handle = nullptr;

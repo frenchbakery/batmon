@@ -59,11 +59,19 @@ namespace buzzer    // private
     {
         QUIET,              // quiet, nothing plays
         STARTUP,            // charming three notes played at startup
-        BATTERY_LOW,        // short medium pitch pulse every few seconds to indicate the battery is starting to get low
+        BATTERY_WARNING,    // short medium pitch pulse every few seconds to indicate the battery is starting to get low
         BATTERY_ALARM,      // short, rapid high pitch pulses indicating the battery is critically low or there is a large
                             // cell voltage difference
     };
     static buzzer_mode_t buzzer_mode = buzzer_mode_t::QUIET;
+
+    /**
+     * @brief sets the buzzer to a specific mode. 
+     * Use this if there is no special initialization needed.
+     * 
+     * @param _mode mode to activate
+     */
+    static void set_mode(buzzer_mode_t _mode);
 
     /**
      * @brief entry point of task
@@ -106,6 +114,8 @@ void buzzer::init()
 
 void buzzer::play_quiet()
 {
+    if (buzzer_mode == buzzer_mode_t::QUIET) return;
+
     stop_task();
     turn_off();
     buzzer_mode = buzzer_mode_t::QUIET;
@@ -113,23 +123,25 @@ void buzzer::play_quiet()
 }
 void buzzer::play_startup()
 {
-    stop_task();
-    turn_off();
-    buzzer_mode = buzzer_mode_t::STARTUP;
-    start_task();
+    set_mode(buzzer_mode_t::STARTUP);
 }
-void buzzer::play_battery_low()
+void buzzer::play_battery_warning()
 {
-    stop_task();
-    turn_off();
-    buzzer_mode = buzzer_mode_t::BATTERY_LOW;
-    start_task();
+    set_mode(buzzer_mode_t::BATTERY_WARNING);
 }
 void buzzer::play_battery_alarm()
 {
+    set_mode(buzzer_mode_t::BATTERY_ALARM);
+}
+
+static void buzzer::set_mode(buzzer_mode_t _mode)
+{
+    // if the mode is already active, do nothing
+    if (buzzer_mode == _mode) return;
+
     stop_task();
     turn_off();
-    buzzer_mode = buzzer_mode_t::BATTERY_ALARM;
+    buzzer_mode = _mode;
     start_task();
 }
 
@@ -204,32 +216,32 @@ static void buzzer::task_fn(void *)
             goto cleanup;
             break;
 
-        case buzzer_mode_t::BATTERY_LOW:
-            set_frequency(440);
+        case buzzer_mode_t::STARTUP:
+            set_frequency(HZ_NOTE_E3);
+            turn_on();
+            msleep(100);
+            set_frequency(HZ_NOTE_B3);
+            msleep(100);
+            set_frequency(HZ_NOTE_E4);
+            msleep(100);
+            turn_off();
+            goto cleanup;
+            break;
+
+        case buzzer_mode_t::BATTERY_WARNING:
+            set_frequency(HZ_NOTE_A4);
             turn_on();
             msleep(100);
             turn_off();
             msleep(1900);
             break;
 
-        case buzzer_mode_t::STARTUP:
-            set_frequency(HZ_NOTE_E2);
-            turn_on();
-            msleep(120);
-            set_frequency(HZ_NOTE_B3);
-            msleep(120);
-            set_frequency(HZ_NOTE_E4);
-            msleep(120);
-            turn_off();
-            goto cleanup;
-            break;
-
         case buzzer_mode_t::BATTERY_ALARM:
             set_frequency(HZ_NOTE_F5);
             turn_on();
-            msleep(200);
+            msleep(150);
             turn_off();
-            msleep(200);
+            msleep(150);
             break;
 
         default:

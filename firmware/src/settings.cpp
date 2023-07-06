@@ -87,7 +87,7 @@ void settings::init()
             // Setting found in NVS
 
             LOGI(
-                "Successfully read setting: %s="PRIi32,
+                "Successfully read setting: %s=%" PRIi32,
                 setting_names[setting_index],
                 setting_value
             );
@@ -105,7 +105,7 @@ void settings::init()
             changes = true;
 
             LOGI(
-                "Setting not found, initializing to default: %s="PRIi32,
+                "Setting not found, initializing to default: %s=%" PRIi32,
                 setting_names[setting_index],
                 setting_value
             );
@@ -150,7 +150,7 @@ void settings::set(key_t _key, int32_t _value)
     setting_read_cache[_key] = _value;
 
     LOGI(
-        "Setting changed: %s="PRIi32,
+        "Setting changed: %s=%" PRIi32,
         setting_names[_key],
         _value
     );
