@@ -15,6 +15,7 @@ namespace buzzer
 {
     /**
      * @brief initializes LEDC to drive buzzer
+     * and starts the buzzer task
      * 
      */
     void init();

@@ -4,9 +4,9 @@
  * @brief buzzer control functions
  * @version 0.1
  * @date 2023-07-05
- * 
+ *
  * @copyright Copyright FrenchBakery (c) 2023
- * 
+ *
  */
 
 #include <freertos/FreeRTOS.h>
@@ -23,14 +23,6 @@
 
 namespace buzzer    // private
 {
-    // buzzer task symbols
-    // the statically allocated memory for the task's stack
-#define TASK_STACK_SIZE 3000
-    static StackType_t task_stack[TASK_STACK_SIZE];
-    // handle to stack buffer and handle to task
-    static StaticTask_t task_static_buffer;
-    static TaskHandle_t task_handle = nullptr;
-    
     // buzzer timer configuration
     static ledc_timer_config_t timer_config = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -54,6 +46,21 @@ namespace buzzer    // private
         }
     };
 
+    // buzzer task symbols
+
+    // the statically allocated memory for the task's stack
+#define TASK_STACK_SIZE 3000
+    static StackType_t task_stack[TASK_STACK_SIZE];
+
+    // handle to stack buffer and handle to task
+    static StaticTask_t task_static_buffer;
+    static TaskHandle_t task_handle = nullptr;
+
+    /**
+     * @brief entry point of task
+     */
+    static void task_fn(void *);
+
     // buzzer mode/function
     enum class buzzer_mode_t
     {
@@ -66,40 +73,27 @@ namespace buzzer    // private
     static buzzer_mode_t buzzer_mode = buzzer_mode_t::QUIET;
 
     /**
-     * @brief sets the buzzer to a specific mode. 
-     * Use this if there is no special initialization needed.
-     * 
+     * @brief activates a mode and notifies the task
+     *
      * @param _mode mode to activate
      */
-    static void set_mode(buzzer_mode_t _mode);
-
-    /**
-     * @brief entry point of task
-     */
-    static void task_fn(void *);
-    
-    /**
-     * @brief starts the task if it is not running already.
-     * If it is already running it stops the task and restarts it.
-     */
-    static void start_task();
-
-    /**
-     * @brief stops the task if it is running
-     */
-    static void stop_task();
-
+    static void activate_mode(buzzer_mode_t _mode);
 
     /**
      * @brief sets the output frequency of the buzzer's timer
-     * 
-     * @param _freq 
+     *
+     * @param _freq
      */
     static void set_frequency(int _freq);
 
-    // turns the buzzer on
+    /**
+     * @brief turns the buzzer on
+     */
     static void turn_on();
-    // turns the buzzer off
+
+    /**
+     * @brief turns the buzzer off
+     */
     static void turn_off();
 }
 
@@ -110,39 +104,46 @@ void buzzer::init()
 
     // configure the output channel
     ESP_ERROR_CHECK(ledc_channel_config(&channel_config));
+
+    // start the buzzer task
+    task_handle = xTaskCreateStatic(
+        task_fn,
+        "buzzer",
+        TASK_STACK_SIZE,
+        nullptr,
+        1,
+        task_stack,
+        &task_static_buffer
+    );
 }
 
 void buzzer::play_quiet()
 {
-    if (buzzer_mode == buzzer_mode_t::QUIET) return;
-
-    stop_task();
-    turn_off();
-    buzzer_mode = buzzer_mode_t::QUIET;
-    // don't need the task to run for this
+    activate_mode(buzzer_mode_t::QUIET);
 }
 void buzzer::play_startup()
 {
-    set_mode(buzzer_mode_t::STARTUP);
+    activate_mode(buzzer_mode_t::STARTUP);
 }
 void buzzer::play_battery_warning()
 {
-    set_mode(buzzer_mode_t::BATTERY_WARNING);
+    if (buzzer_mode != buzzer_mode_t::BATTERY_WARNING)
+        activate_mode(buzzer_mode_t::BATTERY_WARNING);
 }
 void buzzer::play_battery_alarm()
 {
-    set_mode(buzzer_mode_t::BATTERY_ALARM);
+    if (buzzer_mode != buzzer_mode_t::BATTERY_ALARM)
+        activate_mode(buzzer_mode_t::BATTERY_ALARM);
 }
 
-static void buzzer::set_mode(buzzer_mode_t _mode)
+static void buzzer::activate_mode(buzzer_mode_t _mode)
 {
-    // if the mode is already active, do nothing
-    if (buzzer_mode == _mode) return;
-
-    stop_task();
-    turn_off();
     buzzer_mode = _mode;
-    start_task();
+
+    // send a notification to the task so it can immediately abort any sleeps
+    // and start processing the new mode
+    if (task_handle != nullptr)
+        xTaskNotify(task_handle, 0, eNotifyAction::eNoAction);
 }
 
 static void buzzer::set_frequency(int _freq)
@@ -180,32 +181,6 @@ static void buzzer::turn_off()
     ));
 }
 
-static void buzzer::start_task()
-{
-    if (task_handle != nullptr)
-        stop_task();
-    
-    task_handle = xTaskCreateStatic(
-        task_fn,
-        "buzzer",
-        TASK_STACK_SIZE,
-        nullptr,
-        1,
-        task_stack,
-        &task_static_buffer
-    );
-}
-static void buzzer::stop_task()
-{
-    if (task_handle == nullptr)
-        return;
-    
-    // temp var in case the task stops itself 
-    auto task_handle_tmp = task_handle;
-    task_handle = nullptr;
-    vTaskDelete(task_handle_tmp);
-}
-
 static void buzzer::task_fn(void *)
 {
     for (;;)
@@ -213,45 +188,45 @@ static void buzzer::task_fn(void *)
         switch (buzzer_mode)
         {
         case buzzer_mode_t::QUIET:
-            goto cleanup;
+            turn_off();
+            wait_until_notified();
             break;
 
         case buzzer_mode_t::STARTUP:
             set_frequency(HZ_NOTE_E3);
             turn_on();
-            msleep(100);
+            msleep_unless_notified(100);
             set_frequency(HZ_NOTE_B3);
-            msleep(100);
+            msleep_unless_notified(100);
             set_frequency(HZ_NOTE_E4);
-            msleep(100);
+            msleep_unless_notified(100);
             turn_off();
-            goto cleanup;
+            wait_until_notified();
             break;
 
         case buzzer_mode_t::BATTERY_WARNING:
             set_frequency(HZ_NOTE_A4);
             turn_on();
-            msleep(100);
+            msleep_unless_notified(100);
             turn_off();
-            msleep(1900);
+            msleep_unless_notified(1900);
             break;
 
         case buzzer_mode_t::BATTERY_ALARM:
             set_frequency(HZ_NOTE_F5);
             turn_on();
-            msleep(150);
+            msleep_unless_notified(150);
             turn_off();
-            msleep(150);
+            msleep_unless_notified(150);
             break;
 
         default:
-            LOGE("Invalid led state, turning off");
-            play_quiet();
+            LOGE("Invalid buzzer state, ignoring");
+            wait_until_notified();
             break;
         }
     }
 
-cleanup:    
     // set to nullptr before deleting, as any code after this line
     // is not run and the variable isn't referenced here anyway
     task_handle = nullptr;

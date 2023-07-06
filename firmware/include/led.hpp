@@ -15,7 +15,7 @@ namespace led
 {
     /**
      * @brief configures the default LED pin state
-     * and starts the LED task if necessary
+     * and starts the LED task 
      */
     void init();
 

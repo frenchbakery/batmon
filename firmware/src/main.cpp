@@ -26,7 +26,7 @@
 #include "env.hpp"
 #include "led.hpp"
 
- // variables used for heap tracing during debug mode
+// variables used for heap tracing during debug mode
 #define HEAP_TRACE_NUM_RECORDS 100
 static heap_trace_record_t heap_trace_record_buffer[HEAP_TRACE_NUM_RECORDS];
 
