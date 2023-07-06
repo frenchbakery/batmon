@@ -57,21 +57,7 @@ extern "C" void app_main()
     buzzer::play_startup();
     msleep(500);
 
-    // testing
-    buzzer::play_battery_warning();
-    led::set_blink_warning();
-    LOGI("testing battery warning");
-    sleep(10);
-    buzzer::play_battery_alarm();
-    led::set_blink_alarm();
-    LOGI("testing battery alarm");
-    sleep(10);
-    //LOGI("before quiet");
-    buzzer::play_quiet();
-    //LOGI("after quiet, boefore notice");
-    led::set_blink_notice_alive();
-    LOGI("testing quiet");
-    sleep(10);
+
 
     for (;;)
     {
@@ -83,7 +69,7 @@ extern "C" void app_main()
             c1_voltage < settings::get(settings::CELL1_ALARM_VOLTAGE) ||
             c2_voltage < settings::get(settings::CELL2_ALARM_VOLTAGE) ||
             abs(c1_voltage - c2_voltage) > settings::get(settings::CELL_ALARM_VOLTAGE_DIFFERENCE)
-        ) {
+            ) {
             buzzer::play_battery_alarm();
             led::set_blink_alarm();
             LOGI("Battery alarm");
@@ -91,7 +77,7 @@ extern "C" void app_main()
         else if (
             c1_voltage < settings::get(settings::CELL1_WARN_VOLTAGE) ||
             c2_voltage < settings::get(settings::CELL2_WARN_VOLTAGE)
-        ) {
+            ) {
             buzzer::play_battery_warning();
             led::set_blink_warning();
             LOGI("Battery warning");
