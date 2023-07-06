@@ -131,7 +131,7 @@ static void led::task_fn(void *)
             gpio_set_level(env::LED, 1);
             msleep_unless_notified(60);
             gpio_set_level(env::LED, 0);
-            msleep_unless_notified(2940);
+            msleep_unless_notified(3940);
             break;
 
         case led_mode_t::BLINK_CHARGING:
