@@ -25,6 +25,7 @@
 #include "log.hpp"
 #include "env.hpp"
 #include "led.hpp"
+#include "net.hpp"
 
 // variables used for heap tracing during debug mode
 #define HEAP_TRACE_NUM_RECORDS 100
@@ -51,6 +52,9 @@ extern "C" void app_main()
 
     LOGI("Initializing buzzer");
     buzzer::init();
+
+    LOGI("Initializing networking");
+    net::init();
 
     LOGI("Initialization done");
     led::set_blink_notice_alive();
