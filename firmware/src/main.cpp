@@ -71,11 +71,11 @@ extern "C" void app_main()
 
         net::report.c1_voltage = c1_voltage;
         net::report.c2_voltage = c2_voltage;
-        net::report.c1_warn_threshold = settings::CELL1_WARN_VOLTAGE;
-        net::report.c2_warn_threshold = settings::CELL2_WARN_VOLTAGE;
-        net::report.c1_alarm_threshold = settings::CELL1_ALARM_VOLTAGE;
-        net::report.c2_alarm_threshold = settings::CELL2_ALARM_VOLTAGE;
-        net::report.diff_alarm_threshold = settings::CELL_ALARM_VOLTAGE_DIFFERENCE;
+        net::report.c1_warn_threshold = settings::get(settings::CELL1_WARN_VOLTAGE);
+        net::report.c2_warn_threshold = settings::get(settings::CELL2_WARN_VOLTAGE);
+        net::report.c1_alarm_threshold = settings::get(settings::CELL1_ALARM_VOLTAGE);
+        net::report.c2_alarm_threshold = settings::get(settings::CELL2_ALARM_VOLTAGE);
+        net::report.diff_alarm_threshold = settings::get(settings::CELL_ALARM_VOLTAGE_DIFFERENCE);
         net::update();
 
         if (
@@ -102,7 +102,7 @@ extern "C" void app_main()
             LOGI("All good");
         }
 
-        sleep(20);
+        sleep(10);
     }
 
 

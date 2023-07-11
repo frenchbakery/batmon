@@ -325,7 +325,13 @@ el::retcode net::send_report()
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
     nlohmann::json post_data{
-        {"test", 1234}
+        {"c1_voltage", report.c1_voltage},
+        {"c2_voltage", report.c2_voltage},
+        {"c1_warn_threshold", report.c1_warn_threshold},
+        {"c2_warn_threshold", report.c2_warn_threshold},
+        {"c1_alarm_threshold", report.c1_alarm_threshold},
+        {"c2_alarm_threshold", report.c2_alarm_threshold},
+        {"diff_alarm_threshold", report.diff_alarm_threshold}
     };
     const std::string &post_data_str = post_data.dump();
     esp_http_client_set_header(client, "Content-Type", "application/json");
