@@ -69,6 +69,15 @@ extern "C" void app_main()
         int c2_voltage = battery::read_cell2();
         LOGI("C1 (L): %1.2f V,\tC2 (H): %1.2f", c1_voltage * 0.001, c2_voltage * 0.001);
 
+        net::report.c1_voltage = c1_voltage;
+        net::report.c2_voltage = c2_voltage;
+        net::report.c1_warn_threshold = settings::CELL1_WARN_VOLTAGE;
+        net::report.c2_warn_threshold = settings::CELL2_WARN_VOLTAGE;
+        net::report.c1_alarm_threshold = settings::CELL1_ALARM_VOLTAGE;
+        net::report.c2_alarm_threshold = settings::CELL2_ALARM_VOLTAGE;
+        net::report.diff_alarm_threshold = settings::CELL_ALARM_VOLTAGE_DIFFERENCE;
+        net::update();
+
         if (
             c1_voltage < settings::get(settings::CELL1_ALARM_VOLTAGE) ||
             c2_voltage < settings::get(settings::CELL2_ALARM_VOLTAGE) ||
@@ -93,7 +102,7 @@ extern "C" void app_main()
             LOGI("All good");
         }
 
-        msleep(5000);
+        sleep(20);
     }
 
 

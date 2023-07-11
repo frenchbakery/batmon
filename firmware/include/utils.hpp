@@ -11,6 +11,9 @@
 
 #pragma once
 
+#define MIN(x, y) ((x) > (y) ? (y) : (x))
+#define MAX(x, y) ((x) < (y) ? (y) : (x))
+
 #define msleep(__milliseconds) usleep((__milliseconds) * 1000)
 
 // Source: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/FreeRTOS.cpp

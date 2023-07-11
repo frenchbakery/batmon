@@ -17,7 +17,7 @@
 #include <esp_event.h>
 #include <esp_tls.h>
 #include <esp_http_client.h>    // "esp32_mock.h" not found is only an intellisense error, ignore it.
-
+#include <nlohmann/json.hpp>
 #include "net.hpp"
 #include "log.hpp"
 
@@ -27,17 +27,28 @@
  * #define TEST_PSK "somewifipsk"
  */
 #include "secrets.h"
-#define TEST_NUM_RETRY 5
+// the amount of times that an immediate wifi reconnect should be attempted
+#define WIFI_RECONNECT_MAX_IMMEDIATE_ATTEMPTS 5
+// interval of try reconnecting after immediate reconnect attempts fail (seconds)
+#define WIFI_RECONNECT_LONG_PERIOD 30
+
+// maximum size of HTTP responses (any bigger will not be stored)
+#define HTTP_RESPONSE_MAX_LEN 500
 
 
 namespace net   // private
 {
+    // the report data
+    report_t report;
+
     // event group used to notify the networking application task
     // about the wifi state from event handlers
     static EventGroupHandle_t wifi_event_group;
     // bit definition for the above event group
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
+#define WIFI_CONNECTED_BIT          BIT0
+#define WIFI_DISCONNECTED_BIT       BIT1
+#define WIFI_RECONNECT_LATER_BIT    BIT2
+#define REPORT_READY_FOR_SEND_BIT   BIT3
 
     // the statically allocated memory for the task's stack
 #define TASK_STACK_SIZE 10000   // networking task needs a bit more stack space
@@ -70,11 +81,12 @@ namespace net   // private
     );
 
     /**
-     * @brief sends an http get request
-     *
-     * @param _url url to request (e.g. "http://elektron.work/" or "http://192.168.1.23/api/some/endpoint")
+     * @brief sends a battery status report to the server using http
+     * 
+     * @retval ok - request was sent
+     * @retval err - couldn't send request because not connected or connection interrupted
      */
-    static void http_send_get(const char *_url);
+    el::retcode send_report();
 };
 
 
@@ -111,15 +123,10 @@ void net::init()
         .sta = {
             .ssid = TEST_SSID,
             .password = TEST_PSK,
-            /* Authmode threshold resets to WPA2 as default if password matches WPA2 standards (pasword len => 8).
-             * If you want to connect the device to deprecated WEP/WPA networks, Please set the threshold value
-             * to WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK and set the password with length and format matching to
-             * WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK standards.
-             */
             .threshold = {
-                .authmode = WIFI_AUTH_WPA2_PSK
+                .authmode = WIFI_AUTH_WPA2_PSK  // we want to use WPA2 at a minimum
             }
-        },
+        }
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
@@ -139,35 +146,64 @@ void net::init()
     );
 }
 
+void net::update()
+{
+    // notify task of the new report
+    xEventGroupSetBits(wifi_event_group, REPORT_READY_FOR_SEND_BIT);
+}
+
 static void net::task_fn(void *_arg)
 {
+    bool network_ready = false;
+
     for (;;)
     {
-        /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-        * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see below) */
+        /**
+         * Wait for one of the following events:
+         *  - WiFi connection established and got IP
+         *  - WiFi disconnected
+         *  - WiFi should try to reconnect later
+         *  - Report is ready to send
+         */
         EventBits_t bits = xEventGroupWaitBits(
             wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdTRUE,     // clear bits when received, so event can be received again
+            WIFI_CONNECTED_BIT | WIFI_DISCONNECTED_BIT | WIFI_RECONNECT_LATER_BIT | REPORT_READY_FOR_SEND_BIT,
+            pdTRUE,
             pdFALSE,
             portMAX_DELAY
         );
 
-        /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
-        * happened. */
+        // WIFI_CONNECTED event tells task that a network connection has been established
         if (bits & WIFI_CONNECTED_BIT)
         {
-            LOGI("connected to ap SSID:%s password:%s", TEST_SSID, TEST_PSK);
-            LOGI("sending http in 5 sec...");
-            sleep(5);
-            LOGI("sending http request");
-
-            http_send_get("http://ip.jsontest.com/");
-
+            LOGI("Network connection up");
+            network_ready = true;
         }
-        else if (bits & WIFI_FAIL_BIT)
+        // WIFI_DISCONNECTED event tells task that network connection has disconnected
+        else if (bits & WIFI_DISCONNECTED_BIT)
         {
-            LOGI("Failed to connect to SSID:%s, password:%s", TEST_SSID, TEST_PSK);
+            LOGI("Network connection down");
+            network_ready = false;
+        }
+        // WIFI_RECONNECT_LATER event tells task that it should wait a bit and then try to reconnect to the network
+        else if (bits & WIFI_RECONNECT_LATER_BIT)
+        {
+            LOGI("Failed to reconnect to AP, trying again in %d seconds ", WIFI_RECONNECT_LONG_PERIOD);
+            sleep(WIFI_RECONNECT_LONG_PERIOD);
+            esp_wifi_connect();
+        }
+        // REPORT_READY_FOR_SEND event tells task that a new report is ready to send and it should send it now if possible
+        else if (bits & REPORT_READY_FOR_SEND_BIT)
+        {
+            if (network_ready)
+            {
+                // try to send the report (ignore errors)
+                send_report();
+            }
+            else
+            {
+                LOGI("Cannot send report now because network is down.");
+            }
         }
         else
         {
@@ -187,35 +223,45 @@ static void net::wifi_event_handler(
     void *_event_data
 )
 {
-    static int retry_num = 0;
+    static int reconnect_attempt_count = 0;
 
+    // when wifi first starts, we want to initiate the connection process
     if (_event_base == WIFI_EVENT && _event_id == WIFI_EVENT_STA_START)
     {
         esp_wifi_connect();
     }
+    // when wifi is connected, we note that and wait for an IP
     else if (_event_base == WIFI_EVENT && _event_id == WIFI_EVENT_STA_CONNECTED)
     {
         LOGI("Station connected to AP, waiting for DHCP");
     }
+    // when wifi disconnects, we try to reconnect a few times.
+    // If we fail at that, we notify the task of that an it will block for a bit longer
+    // and then try to reconnect again.
     else if (_event_base == WIFI_EVENT && _event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        LOGI("connect to the AP fail");
-        if (retry_num < TEST_NUM_RETRY)
+        LOGI("Station disconnected from AP (%d)", reconnect_attempt_count);
+        xEventGroupSetBits(wifi_event_group, WIFI_DISCONNECTED_BIT);
+
+        // try to reconnect immediately if still allowed
+        if (reconnect_attempt_count < WIFI_RECONNECT_MAX_IMMEDIATE_ATTEMPTS)
         {
+            reconnect_attempt_count++;
+            LOGI("Attempting to reconnect immediately...");
             esp_wifi_connect();
-            retry_num++;
-            LOGI("retry to connect to the AP");
         }
+        // otherwise tell the task to try again at a later time
         else
         {
-            xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
+            xEventGroupSetBits(wifi_event_group, WIFI_RECONNECT_LATER_BIT);
         }
     }
+    // once we get an IP we count that as successfully connected
     else if (_event_base == IP_EVENT && _event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)_event_data;
-        LOGI("got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        retry_num = 0;
+        LOGI("Got IP from DHCP server:" IPSTR, IP2STR(&event->ip_info.ip));
+        reconnect_attempt_count = 0;
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
@@ -224,112 +270,93 @@ esp_err_t net::http_event_handler(
     esp_http_client_event_t *_evt
 )
 {
-    static char *output_buffer;  // Buffer to store response of http request from event handler
-    static int output_len;       // Stores number of bytes read
-    switch(_evt->event_id) {
-        case HTTP_EVENT_ERROR:
-            LOGI("HTTP_EVENT_ERROR");
-            break;
-        case HTTP_EVENT_ON_CONNECTED:
-            LOGI("HTTP_EVENT_ON_CONNECTED");
-            break;
-        case HTTP_EVENT_HEADER_SENT:
-            LOGI("HTTP_EVENT_HEADER_SENT");
-            break;
-        case HTTP_EVENT_ON_HEADER:
-            LOGI("HTTP_EVENT_ON_HEADER, key=%s, value=%s", _evt->header_key, _evt->header_value);
-            break;
-        case HTTP_EVENT_ON_DATA:
-            LOGI("HTTP_EVENT_ON_DATA, len=%d", _evt->data_len);
-            /*
-             *  Check for chunked encoding is added as the URL for chunked encoding used in this example returns binary data.
-             *  However, event handler can also be used in case chunked encoding is used.
-             */
-            if (!esp_http_client_is_chunked_response(_evt->client)) {
-                // If user_data buffer is configured, copy the response into the buffer
-                if (_evt->user_data) {
-                    memcpy(_evt->user_data + output_len, _evt->data, _evt->data_len);
-                } else {
-                    if (output_buffer == NULL) {
-                        output_buffer = (char *) malloc(esp_http_client_get_content_length(_evt->client));
-                        output_len = 0;
-                        if (output_buffer == NULL) {
-                            LOGE("Failed to allocate memory for output buffer");
-                            return ESP_FAIL;
-                        }
-                    }
-                    memcpy(output_buffer + output_len, _evt->data, _evt->data_len);
-                }
-                output_len += _evt->data_len;
-            }
+    // Stores number of bytes already read (in case of multiple data events)
+    // so the buffer offset can be calculated
+    static size_t output_len;
 
-            break;
-        case HTTP_EVENT_ON_FINISH:
-            LOGI("HTTP_EVENT_ON_FINISH");
-            if (output_buffer != NULL) {
-                LOGI("Finished, response:\n%.*s", output_len, output_buffer);
-                free(output_buffer);
-                output_buffer = NULL;
-            }
-            output_len = 0;
-            break;
-        case HTTP_EVENT_DISCONNECTED:
+    switch (_evt->event_id)
+    {
+    case HTTP_EVENT_ON_DATA:
+        LOGI("Received response data chunk, len=%d", _evt->data_len);
+        // only read respose if entire response is transmitted at once
+        if (!esp_http_client_is_chunked_response(_evt->client))
         {
-            LOGI("HTTP_EVENT_DISCONNECTED");
-            int mbedtls_err = 0;
-            esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)_evt->data, &mbedtls_err, NULL);
-            if (err != 0) {
-                LOGI("Last esp error code: 0x%x", err);
-                LOGI("Last mbedtls failure: 0x%x", mbedtls_err);
+            // If user_data buffer is configured, copy the response into the buffer
+            if (_evt->user_data)
+            {
+                if (output_len + _evt->data_len > HTTP_RESPONSE_MAX_LEN)
+                {
+                    LOGE("HTTP response too long for buffer, may be incomplete");
+                    break;
+                }
+                memcpy((char *)_evt->user_data + output_len, _evt->data, _evt->data_len);
+                output_len += _evt->data_len;
+                *((char *)_evt->user_data + output_len) = 0;   // null terminator (may be overwritten by next chunk)
             }
-            if (output_buffer != NULL) {
-                free(output_buffer);
-                output_buffer = NULL;
-            }
-            output_len = 0;
         }
-            break;
-        
-        case HTTP_EVENT_REDIRECT:
-            LOGI("HTTP_EVENT_REDIRECT");
-            esp_http_client_set_header(_evt->client, "From", "user@example.com");
-            esp_http_client_set_header(_evt->client, "Accept", "text/html");
-            esp_http_client_set_redirection(_evt->client);
-            break;
-        
-        default:
-            break;
+        break;
+
+    case HTTP_EVENT_ON_FINISH:
+    case HTTP_EVENT_DISCONNECTED:
+        output_len = 0;
+        break;
+
+    default:
+        break;
     }
     return ESP_OK;
 }
 
-void net::http_send_get(const char *_url)
+el::retcode net::send_report()
 {
-    LOGI("== creating structure...");
-    esp_http_client_config_t config = {
-        .url = _url,
-        .method = HTTP_METHOD_GET,
-        .event_handler = http_event_handler
-    };
+    // return value for single-point return
+    el::retcode retval = el::retcode::ok;
+    // response buffer
+    char http_response_buffer[HTTP_RESPONSE_MAX_LEN + 1];
+    // status code
+    int status_code;
 
-    LOGI("== initializing http...");
+    esp_http_client_config_t config = {
+        .url = "http://elektronlab.local:8080/devtools/http/batt1",
+        .method = HTTP_METHOD_POST,
+        .event_handler = http_event_handler,
+        .user_data = http_response_buffer
+    };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
-    LOGI("== performing request...");
+    nlohmann::json post_data{
+        {"test", 1234}
+    };
+    const std::string &post_data_str = post_data.dump();
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+    esp_http_client_set_post_field(client, post_data_str.c_str(), post_data_str.size());
+
+    LOGI("Sending report via HTTP...");
     esp_err_t err = esp_http_client_perform(client);
 
-    if (err == ESP_OK)
+    if (err != ESP_OK)
     {
-        LOGI("== perform done, status=%d, content_len=%lld", 
-            esp_http_client_get_status_code(client),
-            esp_http_client_get_content_length(client)
-        );
-    }
-    else
-    {
-        LOGE("== perform done with error: %s", esp_err_to_name(err));
+        LOGE("Couldn't send report via HTTP: %s", esp_err_to_name(err));
+        retval = el::retcode::err;
+        goto cleanup;
     }
 
-    LOGI("== http cleanup");
+    status_code = esp_http_client_get_status_code(client);
+    if (status_code != 200)
+    {
+        LOGE("Server responded with non-200 status code %d", status_code);
+        retval = el::retcode::err;
+        goto cleanup;
+    }
+
+    LOGI("Server response (%lld bytes):\n%s",
+        esp_http_client_get_content_length(client),
+        http_response_buffer
+    );
+
+cleanup:
+    LOGI("Report done, cleaning up");
     esp_http_client_cleanup(client);
+
+    return retval;
 }
